@@ -1,0 +1,55 @@
+---
+- name: Adding APT repository key
+  apt_key:
+    id: ACCC4CF8
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+- name: Add PostgreSQL official APT repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main 9.6"
+
+- name: Install PostgreSQL
+  apt:
+    name: "postgresql-9.6"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Create replication user
+  become_user: postgres
+  postgresql_user: name=replication password=noitacilper encrypted=yes role_attr_flags=REPLICATION
+
+- name: Install postgresql conf
+  template: src=postgresql.conf dest=/etc/postgresql/9.6/main/postgresql.conf owner=postgres group=postgres mode=0644
+
+- name: Install pg_hba conf
+  template: src=pg_hba.conf dest=/etc/postgresql/9.6/main/pg_hba.conf owner=postgres group=postgres mode=0640
+
+- name: Stop database servers
+  service: name=postgresql state=stopped
+
+- name: Clear pgdata for standby servers
+  when: "'standby_servers' in group_names"
+  file:
+    path: /var/lib/postgresql/9.6/main
+    state: absent
+
+- name: Start primary servers
+  when: "'primary_servers' in group_names"
+  service: name=postgresql state=started
+
+- name: Take base backup
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  environment:
+    PGPASSWORD: noitacilper
+  shell: pg_basebackup -h {{ hostvars[groups['primary_servers'][0]]['ansible_host'] }} -D /var/lib/postgresql/9.6/main -P -U replication --xlog-method=stream
+
+- name: Install recovery conf
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  template: src=recovery.conf dest=/var/lib/postgresql/9.6/main/recovery.conf
+
+- name: Start standby servers
+  when: "'standby_servers' in group_names"
+  service: name=postgresql state=started

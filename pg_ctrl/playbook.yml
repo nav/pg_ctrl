@@ -1,0 +1,13 @@
+---
+- name: Execute common operations on all servers
+  hosts: all
+  gather_facts: true
+  become: yes
+  roles:
+    - common
+
+- name: Install databases servers
+  hosts: database_servers
+  become: yes
+  roles:
+    - database

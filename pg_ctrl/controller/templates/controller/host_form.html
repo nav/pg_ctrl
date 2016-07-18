@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load bootstrap3 %}
+
+
+{% block content %}
+    <h1>Hosts</h1>
+    <hr>
+
+    <div class="row">
+
+        <div class="col-sm-6">
+            <ul class="list">
+                {% for host in hosts %}
+                    <li>{{ host.fqdn }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="col-sm-6">
+            <h3>Add new</h3>
+            <form action="" method="post" class="form">
+                {% csrf_token %}
+                {% bootstrap_form form %}
+                {% buttons %}
+                    <button type="submit" class="btn btn-primary">
+                        Add
+                    </button>
+                {% endbuttons %}
+            </form>
+        </div>
+    </div>
+
+    {% if hosts|length > 0 %}
+    <div class="row">
+        <div class="col-sm-12 text-center">
+            <form action="{% url "controller:checklist" %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="hosts_created" value="on">
+                <button type="submit" class="btn btn-primary">Done</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}

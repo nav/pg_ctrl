@@ -1,0 +1,7 @@
+Create a view to help generate the inventory file for ansible
+
+Security of the deployment
+
+Make forms to gather information and plug in
+ -  archive location
+ -  passwords

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load bootstrap3 %}
+
+{% block css %}
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
+{% endblock %}
+
+{% block content %}
+    <h3>Checklist</h3>
+
+    <hr>
+
+    <h5>Prerequisites</h5>
+
+    <ul>
+        <li>Server must have ssh up and running</li>
+        <li>User must be able to sudo</li>
+    </ul>
+
+    <br>
+
+    <form action="" method="post" class="form">
+        {% csrf_token %}
+        {% for field in form %}
+            {% bootstrap_field field %}
+            <a href="{{ field.field.widget.attrs.url }}"
+               class="btn btn-link"
+               rel="{{ field.name }}">{{ field.field.widget.attrs.placeholder }}</a>
+            {% if field.name == "public_key_installed" %}
+                <div id="connection_status"></div>
+            {% endif %}
+        {% endfor %}
+
+        <button class="btn btn-primary hidden">Continue &raquo;</button>
+    </form>
+
+{% endblock %}
+
+
+{% block javascript %}
+    <script>
+        var emitter = new EventEmitter();
+        var hosts = [
+            {% for host in hosts %}
+                {'fqdn': '{{host.fqdn}}',
+                 'ip_address': '{{ host.ip_address }}',
+                 'username': '{{ host.username }}',
+                 'state': 'fa fa-ellipsis-h'} {% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        ];
+        var connection_check_url = '{% url "monitor:check_connection" %}';
+    </script>
+
+    <script type="text/babel">
+        var ConnectionStatus = React.createClass({
+            getInitialState: function () {
+                return {
+                    hosts: hosts
+                }
+            },
+
+            componentDidMount: function () {
+                var hosts = this.state.hosts;
+                var self = this;
+                var completed = 0;
+                this.state.hosts.forEach(function (host, index) {
+                    host.state = 'fa fa-spinner fa-spin';
+                    hosts[index] = host;
+                    self.setState({hosts: hosts});
+
+                    $.ajax({
+                        url: connection_check_url,
+                        method: 'GET',
+                        data: {host: host.ip_address, username: host.username}
+                    }).done((data) => {
+                        host.state = 'fa fa-check';
+                        hosts[index] = host;
+                        self.setState({hosts: hosts});
+                        completed += 1;
+                        if (completed === hosts.length) {
+                            $('#id_public_key_installed').prop('checked', 'checked');
+                            $('#id_checklist_completed').val('1');
+                            $('form button').removeClass('hidden');
+                        }
+                    }).fail((xhr) => {
+                        host.state = 'fa fa-times';
+                        hosts[index] = host;
+                        self.setState({hosts: hosts});
+
+                        alert("One or more connections have failed. Make sure the hosts are up and running.");
+                    });
+                });
+            },
+
+            render: function () {
+                var hosts = this.state.hosts.map(function (host) {
+                    return <li key={host.fqdn}>{host.fqdn} <i className={host.state}></i></li>
+                });
+                return <ul>{hosts}</ul>
+            }
+        });
+
+        $('a[rel=public_key_installed').on('click', function (e) {
+            e.preventDefault();
+
+            ReactDOM.render(
+                <ConnectionStatus />,
+                document.getElementById('connection_status')
+            );
+        });
+
+
+    </script>
+{% endblock %}

@@ -1,0 +1,31 @@
+---
+- name: Update apt repo
+  become: yes
+  apt: update-cache=yes
+
+- name: Upgrade all packages
+  become: yes
+  apt: upgrade=dist
+
+- name: Install some packages
+  become: yes
+  apt: name="{{ item }}" state=installed
+  with_items:
+    - sudo
+    - ntp
+    - python-psycopg2
+
+- name: Set hostname
+  become: yes
+  hostname: name="{{ inventory_hostname }}"
+
+- name: set short hostname
+  become: yes
+  lineinfile:
+    dest: /etc/hosts
+    line: '127.0.0.1 {{ inventory_hostname }} {{ inventory_hostname_short }}'
+    owner: root
+    group: root
+    mode: 0644
+    insertafter: EOF
+    state: present

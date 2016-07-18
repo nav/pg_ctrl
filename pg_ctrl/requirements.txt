@@ -1,0 +1,8 @@
+ansible==2.1.0.0
+channels==0.16.1
+Django==1.9.7
+django-bootstrap3==7.0.1
+Fabric==1.11.1
+paramiko==1.17.1
+psycopg2==2.6.2
+shortuuid==0.4.3
