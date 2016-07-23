@@ -1,9 +1,9 @@
 [primary_servers]
-db-primary.navaulakh.com ansible_host=54.187.215.11 ansible_user=ubuntu
+db2.navaulakh.com ansible_host=54.213.192.210 ansible_user=ubuntu
 
 
 [standby_servers]
-db-standby.navaulakh.com ansible_host=54.191.22.82 ansible_user=ubuntu
+db1.navaulakh.com ansible_host=54.149.57.1 ansible_user=ubuntu
 
 
 [database_servers:children]

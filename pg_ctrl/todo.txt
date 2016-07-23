@@ -5,3 +5,5 @@ Security of the deployment
 Make forms to gather information and plug in
  -  archive location
  -  passwords
+
+us-west-2b.fs-df3bcd76.efs.us-west-2.amazonaws.com:/ /mnt/storage nfs defaults,vers=4.1 0 0

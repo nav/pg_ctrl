@@ -6,7 +6,7 @@
 
 - name: Add PostgreSQL official APT repository
   apt_repository:
-    repo: "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main 9.6"
+    repo: "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main 9.6"
 
 - name: Install PostgreSQL
   apt:
@@ -15,15 +15,28 @@
     update_cache: yes
     cache_valid_time: 3600
 
+- name: Create archive folder
+  when: "'primary_servers' in group_names"
+  file: path=/mnt/storage/archive owner=postgres group=postgres mode=0700 state=directory
+
 - name: Create replication user
   become_user: postgres
   postgresql_user: name=replication password=noitacilper encrypted=yes role_attr_flags=REPLICATION
+  ignore_errors: yes
+
+- name: Create pgctrl user
+  become_user: postgres
+  postgresql_user: name=pgctrl password=lrtcgp encrypted=yes
+  ignore_errors: yes
 
 - name: Install postgresql conf
   template: src=postgresql.conf dest=/etc/postgresql/9.6/main/postgresql.conf owner=postgres group=postgres mode=0644
 
 - name: Install pg_hba conf
   template: src=pg_hba.conf dest=/etc/postgresql/9.6/main/pg_hba.conf owner=postgres group=postgres mode=0640
+
+- name: Install archive command
+  template: src=archive.sh dest=/var/lib/postgresql/9.6/archive.sh owner=postgres group=postgres mode=0700
 
 - name: Stop database servers
   service: name=postgresql state=stopped
@@ -49,6 +62,11 @@
   become_user: postgres
   when: "'standby_servers' in group_names"
   template: src=recovery.conf dest=/var/lib/postgresql/9.6/main/recovery.conf
+
+- name: Create no archive file
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  file: path=/var/lib/postgresql/9.6/NOARCHIVE state=touch
 
 - name: Start standby servers
   when: "'standby_servers' in group_names"

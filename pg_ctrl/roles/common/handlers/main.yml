@@ -1,3 +1,7 @@
 ---
 - name: export vars
   command: source /etc/profile.d/lang.sh
+
+- name: mount mounts
+  become: yes
+  command: mount -a

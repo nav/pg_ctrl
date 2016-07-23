@@ -77,7 +77,8 @@ class PlaybookView(generic.TemplateView):
 
     def generate_response(self):
         # Run the playbook
-        cmd = "ansible-playbook -i inventory playbook.yml -e 'host_key_checking=False'"
+        cmd = "ANSIBLE_HOST_KEY_CHECKING=False " \
+              "ansible-playbook -i inventory playbook.yml -e 'host_key_checking=False'"
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
         for line in iter(process.stdout.readline, ''):

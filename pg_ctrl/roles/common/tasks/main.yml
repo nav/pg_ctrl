@@ -14,6 +14,8 @@
     - sudo
     - ntp
     - python-psycopg2
+    - nfs-common
+    - acl
 
 - name: Set hostname
   become: yes
