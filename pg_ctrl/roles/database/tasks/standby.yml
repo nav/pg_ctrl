@@ -1,0 +1,39 @@
+---
+
+- name: Install postgresql conf
+  when: "'standby_servers' in group_names"
+  template: src=postgresql.conf dest=/etc/postgresql/9.6/main/postgresql.conf owner=postgres group=postgres mode=0644
+
+- name: Clear pgdata for standby servers
+  when: "'standby_servers' in group_names"
+  file:
+    path: /var/lib/postgresql/9.6/main
+    state: absent
+
+- name: Take base backup
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  environment:
+    PGPASSWORD: noitacilper
+  shell: pg_basebackup -h {{ hostvars[groups['primary_servers'][0]]['ansible_host'] }} -D /var/lib/postgresql/9.6/main -P -U replication --xlog-method=stream
+
+- name: Install recovery conf
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  template: src=recovery.conf dest=/var/lib/postgresql/9.6/main/recovery.conf owner=postgres group=postgres
+
+- name: Remove recovery done
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  file: path=/var/lib/postgresql/9.6/main/recovery.done state=absent
+
+- name: Create no archive file
+  become_user: postgres
+  when: "'standby_servers' in group_names"
+  file: path=/var/lib/postgresql/9.6/NOARCHIVE state=touch
+
+- name: Start standby servers
+  when: "'standby_servers' in group_names"
+  service: name=postgresql state=started
+
+

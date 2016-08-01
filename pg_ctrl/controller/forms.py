@@ -41,3 +41,11 @@ class HostForm(forms.ModelForm):
     class Meta:
         model = Host
         fields = ('fqdn', 'ip_address', 'username', 'is_primary')
+
+
+class FailoverForm(forms.Form):
+    host = forms.ModelChoiceField(queryset=Host.objects.filter(is_primary=False), required=True)
+
+
+class StandbyForm(forms.Form):
+    host = forms.ModelChoiceField(queryset=Host.objects.filter(is_primary=False), required=True)

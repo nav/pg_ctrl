@@ -10,7 +10,7 @@
 
             <textarea class="col-sm-12" rows="20" style="font-family: 'Courier New'">{% include "controller/inventory.html" %}</textarea>
 
-            <form action="{% url "controller:playbook" %}" method="post">
+            <form action="{% url "controller:playbook_install" %}" method="post">
                 {% csrf_token %}
                 <button class="btn btn-primary">Save</button>
             </form>
