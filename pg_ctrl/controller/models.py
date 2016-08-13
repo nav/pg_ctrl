@@ -35,8 +35,9 @@ class AttributeValue(models.Model):
 
 
 class Host(BaseUUID):
+    parent = models.ForeignKey('self', related_name='children', blank=True, null=True)
     fqdn = models.CharField(verbose_name="FQDN", max_length=255)
-    ip_address = models.GenericIPAddressField(protocol='both', verbose_name="IP Address")
+    ip_address = models.GenericIPAddressField(protocol='both', verbose_name="IP Address", unique=True)
     username = models.CharField(max_length=255)
     is_primary = models.BooleanField(verbose_name="primary server", default=False, help_text="Is this the primary database server?")
 

@@ -7,7 +7,7 @@ NOARCHIVEFILE=${PG_HOME}/NOARCHIVE
 
 cd ${PG_HOME}/main
 
-test -f ${NOARCHIVEFILE} && exit 1
+test -f ${NOARCHIVEFILE} && exit 0
 
 test ! -f /mnt/storage/archive/${WAL_FILE} && cp ${WAL_PATH} /mnt/storage/archive/${WAL_FILE}
 

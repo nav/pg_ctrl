@@ -1,15 +1,87 @@
-[primary_servers]{% for host in hosts %}{% if host.is_primary %}
-{{ host.fqdn }} ansible_host={{ host.ip_address }} ansible_user={{ host.username }}
-{% endif %}{% endfor %}
+{% extends "base.html" %}
 
-[standby_servers]{% for host in hosts %}{% if not host.is_primary %}
-{{ host.fqdn }} ansible_host={{ host.ip_address }} ansible_user={{ host.username }}
-{% endif %}{% endfor %}
+{% block css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.min.css">
+    <style type="text/css">
+        #mynetwork {
+            width: 600px;
+            height: 400px;
+            border: 1px solid lightgray;
+        }
+    </style>
+{% endblock %}
 
-[database_servers:children]
-primary_servers
-standby_servers
+{% block content %}
+    <div class="row">
+        <div class="col-sm-6">
+            <h2>Hosts</h2>
+            <hr>
 
-[database_servers:vars]
-ansible_port=22
-ansible_ssh_private_key_file={{ private_key }}
+            <div id="mynetwork"></div>
+
+            {{ host_tree }}
+
+            <ul class="list">
+                {% for host in hosts %}
+                    {% include 'controller/host.html' with host=host %}
+                    {% if host.children.count %}
+                        <ul>
+                            {% for child_obj in host.children.all %}
+                                {% include 'controller/host.html' with host=child_obj %}
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-sm-6">
+            <pre class="console">{% include "controller/ansible_inventory.txt" %}</pre>
+        </div>
+    </div>
+
+    <form action="{% url "controller:playbook_install" %}" method="post">
+        {% csrf_token %}
+        <button class="btn btn-primary">Save</button>
+    </form>
+{% endblock %}
+
+{% block javascript %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.min.js"></script>
+    <script>
+        // create an array with nodes
+        var nodes = new vis.DataSet([
+            {% for host in hosts %}
+                {id: {{ host.pk }}, label: '{{ host.fqdn }}{% if host.is_primary %}\nPrimary{% endif %}'}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]);
+
+        var DOTstring = '{{ host_tree|safe }}';
+        var parsedData = vis.network.convertDot(DOTstring);
+
+
+        // create a network
+        var container = document.getElementById('mynetwork');
+
+        // provide the data in the vis format
+        var data = {
+            nodes: nodes,
+            edges: parsedData.edges
+        };
+        var options = {
+            nodes: {
+                shape: "box"
+            },
+            layout: {
+                hierarchical: {
+                    direction: "UD",
+                    nodeSpacing: 200,
+                    parentCentralization: true,
+                    sortMethod: "directed"
+                }
+            }
+        };
+
+        // initialize your network!
+        var network = new vis.Network(container, data, options);
+    </script>
+{% endblock %}

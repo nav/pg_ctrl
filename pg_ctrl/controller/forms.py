@@ -1,10 +1,12 @@
 from django import forms
 from django.core.urlresolvers import reverse_lazy
+from monitor.views import check_connection
 from .models import Host, Attribute, AttributeValue
 
 
 def checkbox(placeholder, url):
     return forms.CheckboxInput(attrs=dict(placeholder=placeholder, url=url))
+
 
 class ChecklistForm(forms.Form):
     hosts_created = forms.BooleanField(required=False,
@@ -42,10 +44,22 @@ class HostForm(forms.ModelForm):
         model = Host
         fields = ('fqdn', 'ip_address', 'username', 'is_primary')
 
+    def clean(self):
+        cleaned_data = super(HostForm, self).clean()
+        fqdn = cleaned_data.get('fqdn')
+        ip_address = cleaned_data.get('ip_address')
+        username = cleaned_data.get('username')
+        connection_result = check_connection(ip_address, username)
+
+        if connection_result['status'] != 'ok':
+            raise forms.ValidationError(
+                "Unable to connect to {} ({}) using {}".format(fqdn, ip_address, username))
+
 
 class FailoverForm(forms.Form):
     host = forms.ModelChoiceField(queryset=Host.objects.filter(is_primary=False), required=True)
 
 
 class StandbyForm(forms.Form):
+    parent = forms.ModelChoiceField(queryset=Host.objects.all(), required=True)
     host = forms.ModelChoiceField(queryset=Host.objects.filter(is_primary=False), required=True)

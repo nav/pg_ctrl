@@ -1,12 +1,15 @@
 import os
 import subprocess
-
 import sys
+
 from django import http
 from django.conf import settings
 from django.views import generic
 from django.template import loader
 from django.core.urlresolvers import reverse
+
+import pydot
+
 from .models import Host, AttributeValue
 from .forms import HostForm, ChecklistForm, FailoverForm, StandbyForm
 
@@ -57,12 +60,49 @@ class DeleteHostView(generic.DeleteView):
 
 
 def get_inventory_context():
-    return dict(hosts=Host.objects.all(),
+    dot = pydot.Dot(graph_type='graph')
+
+    def get_children(nodes):
+        output = dict()
+        for node in nodes:
+            children = node.children.all()
+            if children:
+                output[node.pk] = get_children(children)
+            else:
+                output[node.pk] = {}
+        return output
+
+    def draw(parent_name, child_name):
+        edge = pydot.Edge(parent_name, child_name)
+        dot.add_edge(edge)
+
+    def visit(node, parent=None):
+        for k, v in node.iteritems():
+            if isinstance(v, dict):
+                # We start with the root node whose parent is None
+                # we don't want to graph the None node
+                if parent:
+                    draw(parent, k)
+                visit(v, k)
+            else:
+                draw(parent, k)
+                # drawing the label using a distinct name
+                draw(k, k + '_' + v)
+
+    hosts = Host.objects.all()
+    host_tree = get_children(hosts.filter(parent=None))
+
+    dot = pydot.Dot(graph_type='digraph')
+    visit(host_tree)
+    host_tree = dot.to_string().replace('\n', '')
+
+    return dict(hosts=hosts,
+                host_tree=host_tree,
                 private_key='{}/.ssh/pg_ctrl.id_rsa'.format(os.getenv('HOME')),
                 python_executable=sys.executable)
 
 class InventoryView(generic.TemplateView):
-    template_name = 'controller/inventory_form.html'
+    template_name = 'controller/inventory.html'
 
     def get_context_data(self, **kwargs):
         context = super(InventoryView, self).get_context_data(**kwargs)
@@ -93,7 +133,7 @@ class BasePlaybookView(generic.TemplateView):
 
     def write_inventory(self):
         with open(self.inventory_path, 'w') as fsock:
-            template = loader.get_template('controller/inventory.html')
+            template = loader.get_template('controller/ansible_inventory.txt')
             rendered = template.render(self.get_context_data())
             fsock.write(rendered)
 
@@ -171,11 +211,15 @@ class PlaybookAddStandbyView(BasePlaybookView):
         if not form.is_valid():
             return http.HttpResponseBadRequest()
 
+        parent_host = form.cleaned_data.get('parent')
         standby_host = form.cleaned_data.get('host')
+        standby_host.parent = parent_host
+        standby_host.save()
 
         if self.is_locked():
             return http.HttpResponse(self.locked_message, status=400)
 
+        self.write_inventory()
         cmd = "ANSIBLE_HOST_KEY_CHECKING=False " \
               "ansible-playbook -i inventory playbook.yml " \
               "--limit {} --tags standby".format(standby_host.fqdn)

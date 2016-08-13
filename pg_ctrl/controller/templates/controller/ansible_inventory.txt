@@ -1,0 +1,15 @@
+[primary_servers]{% for host in hosts %}{% if host.is_primary %}
+{{ host.fqdn }} ansible_host={{ host.ip_address }} ansible_user={{ host.username }}
+{% endif %}{% endfor %}
+
+[standby_servers]{% for host in hosts %}{% if not host.is_primary %}
+{{ host.fqdn }} ansible_host={{ host.ip_address }} ansible_user={{ host.username }} {% if host.parent %}parent={{ host.parent.ip_address }}{% endif %}
+{% endif %}{% endfor %}
+
+[database_servers:children]
+primary_servers
+standby_servers
+
+[database_servers:vars]
+ansible_port=22
+ansible_ssh_private_key_file={{ private_key }}

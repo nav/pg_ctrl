@@ -31,12 +31,6 @@
 - name: Stop database servers
   service: name=postgresql state=stopped
 
-#- name: Clear pgdata for standby servers
-#  when: "'standby_servers' in group_names"
-#  file:
-#    path: /var/lib/postgresql/9.6/main
-#    state: absent
-
 - name: Start primary servers
   when: "'primary_servers' in group_names"
   service: name=postgresql state=started
@@ -52,25 +46,3 @@
   when: "'primary_servers' in group_names"
   postgresql_user: name=pgctrl password=lrtcgp encrypted=yes
   ignore_errors: yes
-
-#- name: Take base backup
-#  become_user: postgres
-#  when: "'standby_servers' in group_names"
-#  environment:
-#    PGPASSWORD: noitacilper
-#  shell: pg_basebackup -h {{ hostvars[groups['primary_servers'][0]]['ansible_host'] }} -D /var/lib/postgresql/9.6/main -P -U replication --xlog-method=stream
-
-#- name: Install recovery conf
-#  become_user: postgres
-#  when: "'standby_servers' in group_names"
-#  template: src=recovery.conf dest=/var/lib/postgresql/9.6/main/recovery.conf
-
-#- name: Create no archive file
-#  become_user: postgres
-#  when: "'standby_servers' in group_names"
-#  file: path=/var/lib/postgresql/9.6/NOARCHIVE state=touch
-#
-#- name: Start standby servers
-#  when: "'standby_servers' in group_names"
-#  service: name=postgresql state=started
-

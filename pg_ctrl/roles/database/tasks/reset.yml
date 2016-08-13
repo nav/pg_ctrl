@@ -1,0 +1,12 @@
+---
+- name: Stop servers
+  service: name=postgresql state=stopped
+
+- name: Drop cluster
+  become_user: postgres
+  shell: pg_dropcluster 9.6 main
+
+- name: Create cluster
+  become_user: postgres
+  shell: pg_createcluster 9.6 main
+

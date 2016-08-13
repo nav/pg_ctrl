@@ -1,6 +1,8 @@
 ---
+#- include: reset.yml
 - include: install.yml
 - include: standby.yml
   tags: standby
 - include: failover.yml
   tags: failover
+
